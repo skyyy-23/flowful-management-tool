@@ -13,6 +13,9 @@ return new class extends Migration
     {
         Schema::create('organization_members', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('organization_id');
+            $table->unsignedBigInteger('user_id');
+            $table->string('role')->default('member'); // owner / admin / member
             $table->timestamps();
         });
     }
