@@ -28,4 +28,19 @@ class TaskController extends Controller
 
         return response()->json($task);
     }
+
+    public function getByProject($id){
+        try{
+            $tasks = Task::where('project_id', $id)
+                    ->whereNull('parent_id') // only main tasks
+                    ->with('subtasks') // load children
+                    ->get();
+
+            return response()->json($tasks);
+        }catch(\Exception $e){
+            return response()->json([
+                'error' => $e->getMessage()
+            ], 500);
+        } 
+    }
 }

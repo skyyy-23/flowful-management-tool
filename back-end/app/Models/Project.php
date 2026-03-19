@@ -13,6 +13,6 @@ class Project extends Model
         'description'
     ];
     public function task(){
-        $this->hasMany(Task::class);
+        return $this->hasMany(Task::class);
     }
 }

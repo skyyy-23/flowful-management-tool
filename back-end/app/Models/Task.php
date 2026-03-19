@@ -15,9 +15,13 @@ class Task extends Model
     ];
 
     public function subtasks(){
-        $this->hasMany(Task::class, 'parent_id');
+        return $this->hasMany(Task::class, 'parent_id');
     }
     public function parent(){
-        $this->belongsTo(Task::class, 'parent_id');
+        return $this->belongsTo(Task::class, 'parent_id');
+    }
+    public function project()
+    {
+        return $this->belongsTo(Project::class);
     }
 }
