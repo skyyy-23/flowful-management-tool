@@ -45,17 +45,16 @@ class AuthController extends Controller
                 return response()->json([
                     'message' => 'Invalid credentials'
                 ], 401);
-            }      
-
+            }
+            
             $user = Auth::user();
             $token = $user->createToken('flowful_token')->plainTextToken;
-
+            
             return response()->json([
                 'user' => $user,
                 'token' => $token
             ]);
-        }
-        catch (\Exception $e) {
+        }catch (\Exception $e) {
             return response()->json([
                 'message' => 'Something went wrong',
                 'error' => $e->getMessage()
