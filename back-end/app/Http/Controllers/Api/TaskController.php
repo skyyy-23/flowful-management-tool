@@ -18,7 +18,8 @@ class TaskController extends Controller
             'parent_id' => $request->parent_id, // optional
             'title' => $request->title,
             'description' => $request->description,
-            'status' => 'todo'
+            'status' => 'todo',
+            'assigned_to' => $request->assigned_to
         ]);
         return response()->json($task);
     }
@@ -42,5 +43,17 @@ class TaskController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         } 
+    }
+    
+    public function board($id){
+        $tasks = Task::where('project_id', $id)
+                ->with('assignee')
+                ->get();
+
+        return response()->json([
+            'todo' => $tasks->where('status', 'todo')->values(),
+            'doing' => $tasks->where('status', 'doing')->values(),
+            'done' => $tasks->where('status', 'done')->values(),
+        ]);
     }
 }
