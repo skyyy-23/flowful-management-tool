@@ -31,6 +31,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/organizations', [OrganizationController::class, 'store']);
     Route::get('/organizations/{id}', [OrganizationController::class, 'show']);
     Route::delete('/organizations/{id}', [OrganizationController::class, 'destroy']);
+    Route::post('/organizations/{id}/invite', [OrganizationController::class, 'invite']);
+    Route::get('/invitations/{token}/accept', [OrganizationController::class, 'acceptInvite']);
 
     // Projects
     Route::get('/projects', [ProjectController::class, 'index']);

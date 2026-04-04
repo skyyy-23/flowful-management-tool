@@ -6,5 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class OrganizationInvitation extends Model
 {
-    //
+    protected $fillable = [
+        'organization_id',
+        'email',
+        'token',
+        'status'
+    ];
 }
