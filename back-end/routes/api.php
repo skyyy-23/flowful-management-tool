@@ -30,20 +30,27 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/organizations', [OrganizationController::class, 'index']);
     Route::post('/organizations', [OrganizationController::class, 'store']);
     Route::get('/organizations/{id}', [OrganizationController::class, 'show']);
-    Route::delete('/organizations/{id}', [OrganizationController::class, 'destroy']);
-    Route::post('/organizations/{id}/invite', [OrganizationController::class, 'invite']);
+    Route::delete('/organizations/{id}', [OrganizationController::class, 'destroy'])
+    ->middleware('role:owner');
+    Route::post('/organizations/{id}/invite', [OrganizationController::class, 'invite'])
+    ->middleware('role:admin');
     Route::get('/invitations/{token}/accept', [OrganizationController::class, 'acceptInvite']);
 
     // Projects
     Route::get('/projects', [ProjectController::class, 'index']);
-    Route::post('/projects', [ProjectController::class, 'store']);
+    Route::post('/projects', [ProjectController::class, 'store'])
+    ->middleware('role:admin');
     Route::get('/projects/{id}', [ProjectController::class, 'show']);
-    Route::delete('/projects/{id}', [ProjectController::class, 'destroy']);
+    Route::delete('/projects/{id}', [ProjectController::class, 'destroy'])
+    ->middleware('role:admin');
 
     // Tasks
-    Route::post('/tasks', [TaskController::class, 'store']);
-    Route::patch('/tasks/{id}', [TaskController::class, 'update']);
-    Route::delete('/tasks/{id}', [TaskController::class, 'destroy']);
+    Route::post('/tasks', [TaskController::class, 'store'])
+    ->middleware('role:member');
+    Route::patch('/tasks/{id}', [TaskController::class, 'update'])
+    ->middleware('role:member');
+    Route::delete('/tasks/{id}', [TaskController::class, 'destroy'])
+    ->middleware('role:member');
     Route::get('/projects/{id}/tasks', [TaskController::class, 'getByProject']);
     Route::get('/projects/{id}/board', [TaskController::class, 'board']);
 });

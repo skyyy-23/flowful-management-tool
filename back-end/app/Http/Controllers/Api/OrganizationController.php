@@ -106,6 +106,22 @@ class OrganizationController extends Controller
             'message' => 'You have joined the organization'
         ]);
     }
+
+    public function destroy($id, Request $request){
+        $org = Organization::find($id);
+    
+        if (!$org) {
+            return response()->json([
+                'message' => 'Organization not found'
+            ], 404);
+        }
+    
+        $org->delete();
+    
+        return response()->json([
+            'message' => 'Organization deleted successfully'
+        ]);
+    }
 }
     
 

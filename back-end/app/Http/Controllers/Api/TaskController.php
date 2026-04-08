@@ -90,4 +90,20 @@ class TaskController extends Controller
             'done' => $tasks->where('status', 'done')->values(),
         ]);
     }
+
+    public function destroy($id){
+        $task = Task::find($id);
+
+        if (!$task) {
+            return response()->json([
+                'message' => 'Task not found'
+            ], 404);
+        }
+
+        $task->delete();
+
+        return response()->json([
+            'message' => 'Task deleted'
+        ]);
+    }
 }
