@@ -8,7 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 class Organization extends Model
 {
     protected $fillable = ['name', 'created_by'];
+
     public function members(){
         return $this->hasMany(OrganizationMember::class);
+    }
+
+    public function projects(){
+        return $this->hasMany(Project::class);
     }
 }

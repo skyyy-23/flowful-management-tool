@@ -2,17 +2,20 @@
 
 namespace App\Http\Middleware;
 
-use Closure;
-use Illuminate\Http\Request;
 use App\Models\OrganizationMember;
 use App\Models\Project;
 use App\Models\Task;
+use Closure;
+use Illuminate\Http\Request;
 
 class RoleMiddleware
 {
     public function handle(Request $request, Closure $next, $role)
     {
         $user = $request->user();
+        $route = $request->route();
+        $routeId = $route?->parameter('id');
+        $routeUri = $route?->uri() ?? '';
 
         if (!$user) {
             return response()->json([
@@ -20,28 +23,54 @@ class RoleMiddleware
             ], 401);
         }
 
-        // Try to get organization_id directly
-        $orgId = $request->organization_id 
-            ?? $request->route('organization_id') 
-            ?? $request->route('id');
+        $orgId = $request->organization_id ?? $route?->parameter('organization_id');
 
-        // If still no orgId, resolve from project
-        if (!$orgId && $request->route('project_id')) {
-            $project = Project::find($request->route('project_id'));
-            if ($project) {
-                $orgId = $project->organization_id;
-            }
+        if (!$orgId && $routeId && str_contains($routeUri, 'organizations/')) {
+            $orgId = $routeId;
         }
 
-        // Resolve from task → project → organization
-        if (!$orgId && $request->route('id')) {
-            $task = Task::find($request->route('id'));
-            if ($task) {
-                $project = Project::find($task->project_id);
-                if ($project) {
-                    $orgId = $project->organization_id;
-                }
+        $projectId = $request->project_id ?? $route?->parameter('project_id');
+
+        if (!$projectId && $routeId && str_contains($routeUri, 'projects/')) {
+            $projectId = $routeId;
+        }
+
+        if (!$orgId && $projectId) {
+            $project = Project::find($projectId);
+
+            if (!$project) {
+                return response()->json([
+                    'message' => 'Project not found'
+                ], 404);
             }
+
+            $orgId = $project->organization_id;
+        }
+
+        $taskId = $request->task_id ?? $route?->parameter('task_id');
+
+        if (!$taskId && $routeId && str_contains($routeUri, 'tasks/')) {
+            $taskId = $routeId;
+        }
+
+        if (!$orgId && $taskId) {
+            $task = Task::find($taskId);
+
+            if (!$task) {
+                return response()->json([
+                    'message' => 'Task not found'
+                ], 404);
+            }
+
+            $project = Project::find($task->project_id);
+
+            if (!$project) {
+                return response()->json([
+                    'message' => 'Project not found'
+                ], 404);
+            }
+
+            $orgId = $project->organization_id;
         }
 
         if (!$orgId) {
@@ -50,7 +79,6 @@ class RoleMiddleware
             ], 400);
         }
 
-        // Get user role
         $userRole = OrganizationMember::where('user_id', $user->id)
             ->where('organization_id', $orgId)
             ->value('role');
@@ -61,7 +89,6 @@ class RoleMiddleware
             ], 403);
         }
 
-        // Role hierarchy
         $roles = [
             'owner' => 3,
             'admin' => 2,

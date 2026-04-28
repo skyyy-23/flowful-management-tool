@@ -12,7 +12,16 @@ class Project extends Model
         'name', 
         'description'
     ];
+
+    public function organization(){
+        return $this->belongsTo(Organization::class);
+    }
+
     public function task(){
+        return $this->tasks();
+    }
+
+    public function tasks(){
         return $this->hasMany(Task::class);
     }
 }

@@ -10,6 +10,7 @@ class OrganizationInvitation extends Model
         'organization_id',
         'email',
         'token',
+        'role',
         'status'
     ];
 }

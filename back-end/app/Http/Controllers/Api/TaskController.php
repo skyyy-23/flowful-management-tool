@@ -3,26 +3,30 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\Task;
 use App\Models\OrganizationMember;
 use App\Models\Project;
+use App\Models\Task;
+use Illuminate\Http\Request;
 
 class TaskController extends Controller
 {
-    public function store(Request $request){
-        $request->validate([
-            'project_id' => 'required',
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'project_id' => 'required|exists:projects,id',
+            'parent_id' => 'nullable|exists:tasks,id',
             'title' => 'required',
+            'description' => 'nullable',
+            'status' => 'nullable|in:todo,doing,done',
             'assigned_to' => 'nullable|exists:users,id'
         ]);
 
-        $project = Project::findOrFail($request->project_id);
+        $project = Project::findOrFail($validated['project_id']);
 
-        if ($request->assigned_to) {
-            $isMember = OrganizationMember::where('user_id', $request->assigned_to)
-                        ->where('organization_id', $project->organization_id)
-                        ->exists();
+        if (!empty($validated['assigned_to'])) {
+            $isMember = OrganizationMember::where('user_id', $validated['assigned_to'])
+                ->where('organization_id', $project->organization_id)
+                ->exists();
 
             if (!$isMember) {
                 return response()->json([
@@ -31,26 +35,28 @@ class TaskController extends Controller
             }
         }
 
-        $task = Task::create($request->all());
+        $task = Task::create($validated);
 
-        return response()->json($task);
+        return response()->json($task->load(['assignee', 'subtasks']), 201);
     }
-    public function update(Request $request, $id){
+
+    public function update(Request $request, $id)
+    {
         $task = Task::findOrFail($id);
-        
-        $request->validate([
+
+        $validated = $request->validate([
             'title' => 'sometimes|required',
             'description' => 'nullable',
             'status' => 'sometimes|in:todo,doing,done',
-            'assigned_to' => 'nullable|exists:user,id'
+            'assigned_to' => 'nullable|exists:users,id'
         ]);
 
         $project = Project::findOrFail($task->project_id);
-        
-        if($request->assigned_to){
-            $isMember = OrganizationMember::where('user_id', $request->assigned_to)
-                        ->where('organization_id', $project->organization_id)
-                        ->exists();
+
+        if (!empty($validated['assigned_to'])) {
+            $isMember = OrganizationMember::where('user_id', $validated['assigned_to'])
+                ->where('organization_id', $project->organization_id)
+                ->exists();
 
             if (!$isMember) {
                 return response()->json([
@@ -59,30 +65,32 @@ class TaskController extends Controller
             }
         }
 
-        $task->update($request->only(['title', 'description', 'status', 'assigned_to']));
+        $task->update($validated);
 
-        return response()->json($task);
+        return response()->json($task->load(['assignee', 'subtasks']));
     }
 
-    public function getByProject($id){
-        try{
-            $tasks = Task::where('project_id', $id)
-                    ->whereNull('parent_id') // only main tasks
-                    ->with('subtasks') // load children
-                    ->get();
+    public function getByProject($id)
+    {
+        $project = $this->getAccessibleProject($id);
 
-            return response()->json($tasks);
-        }catch(\Exception $e){
-            return response()->json([
-                'error' => $e->getMessage()
-            ], 500);
-        } 
+        $tasks = Task::where('project_id', $project->id)
+            ->whereNull('parent_id')
+            ->with(['subtasks', 'assignee'])
+            ->latest()
+            ->get();
+
+        return response()->json($tasks);
     }
-    
-    public function board($id){
-        $tasks = Task::where('project_id', $id)
-                ->with('assignee')
-                ->get();
+
+    public function board($id)
+    {
+        $project = $this->getAccessibleProject($id);
+
+        $tasks = Task::where('project_id', $project->id)
+            ->whereNull('parent_id')
+            ->with(['assignee', 'subtasks'])
+            ->get();
 
         return response()->json([
             'todo' => $tasks->where('status', 'todo')->values(),
@@ -91,7 +99,8 @@ class TaskController extends Controller
         ]);
     }
 
-    public function destroy($id){
+    public function destroy($id)
+    {
         $task = Task::find($id);
 
         if (!$task) {
@@ -105,5 +114,12 @@ class TaskController extends Controller
         return response()->json([
             'message' => 'Task deleted'
         ]);
+    }
+
+    private function getAccessibleProject($projectId): Project
+    {
+        return Project::whereHas('organization.members', function ($query) {
+            $query->where('user_id', auth()->id());
+        })->findOrFail($projectId);
     }
 }
